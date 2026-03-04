@@ -8,7 +8,7 @@ import type { ParsedDoc } from './utils/docParser'
 type AppState =
   | { screen: 'idle' }
   | { screen: 'loading-doc'; docId: string; accessToken: string }
-  | { screen: 'reading'; doc: ParsedDoc; accessToken: string }
+  | { screen: 'reading'; doc: ParsedDoc; accessToken?: string }
   | { screen: 'error'; message: string }
 
 // Google Picker requires GAPI (loaded in index.html via a <script> tag)
@@ -98,6 +98,10 @@ export default function App() {
     void loadDoc(docId, accessToken)
   }, [accessToken, loadDoc])
 
+  const handleDocLoaded = useCallback((doc: ParsedDoc) => {
+    setAppState({ screen: 'reading', doc })
+  }, [])
+
   // ── Google Picker ────────────────────────────────────────────────────────
   const openPicker = useCallback(() => {
     if (!gapiReady || !accessToken || typeof google === 'undefined') {
@@ -130,29 +134,23 @@ export default function App() {
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="app">
-      {appState.screen === 'idle' && !accessToken && (
-        <div className="landing">
-          <h1>Read-Along Highlighter</h1>
-          <p className="tagline">
-            Read your Google Doc out loud — the app follows along and highlights
-            every word as you say it, so you never lose your place.
-          </p>
-          <button className="primary-btn sign-in-btn" onClick={() => login()}>
-            Sign in with Google
-          </button>
-          <p className="hint">
-            You'll be asked to allow access to your Google Docs so this app can
-            display your document. No changes are ever made to your document.
-          </p>
-        </div>
-      )}
-
-      {appState.screen === 'idle' && accessToken && (
-        <DocLoader
-          accessToken={accessToken}
-          onDocSelected={handleDocSelected}
-          onOpenPicker={openPicker}
-        />
+      {appState.screen === 'idle' && (
+        <>
+          <div className="landing">
+            <h1>Lace's Super Cool Highlighter Reading App!</h1>
+            <p className="tagline">
+              Read aloud from a Google Doc, or paste your text here.             
+            </p>
+            <p>The app follows along and highlights each word as you say it! Yippee!</p>
+          </div>
+          <DocLoader
+            accessToken={accessToken}
+            onDocSelected={handleDocSelected}
+            onDocLoaded={handleDocLoaded}
+            onOpenPicker={openPicker}
+            onSignIn={() => login()}
+          />
+        </>
       )}
 
       {appState.screen === 'loading-doc' && (

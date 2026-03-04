@@ -20,6 +20,44 @@ export function normalizeWord(word: string): string {
 }
 
 /**
+ * Parse a raw text string into a ParsedDoc.
+ * Splits on blank lines (or consecutive newlines) for paragraph boundaries,
+ * then on whitespace for individual words. Works for any text source
+ * (Milanote copy-paste, file upload, etc.).
+ */
+export function parseRawText(title: string, rawText: string): ParsedDoc {
+  const words: Word[] = []
+  const paragraphs: number[][] = []
+  let wordIndex = 0
+
+  // Split into paragraphs on one or more blank lines
+  const rawParagraphs = rawText.split(/\n\s*\n|\r\n\s*\r\n/)
+
+  for (const para of rawParagraphs) {
+    const paraWordIndices: number[] = []
+    // Collapse internal newlines to spaces, then split on whitespace
+    const paraText = para.replace(/[\r\n]+/g, ' ')
+
+    for (const token of paraText.split(/\s+/)) {
+      const trimmed = token.trim()
+      if (!trimmed) continue
+      const normalized = normalizeWord(trimmed)
+      if (!normalized) continue
+
+      words.push({ text: trimmed, normalized, index: wordIndex, paragraphIndex: paragraphs.length })
+      paraWordIndices.push(wordIndex)
+      wordIndex++
+    }
+
+    if (paraWordIndices.length > 0) {
+      paragraphs.push(paraWordIndices)
+    }
+  }
+
+  return { title, words, paragraphs }
+}
+
+/**
  * Fetch a Google Doc by ID and parse it into a flat word list.
  * Traverses body.content → paragraphs → textRun elements.
  */
@@ -40,41 +78,22 @@ export async function fetchAndParseDoc(
   }
 
   const doc = await response.json() as GoogleDoc
-  const words: Word[] = []
-  const paragraphs: number[][] = []
-  let wordIndex = 0
 
+  // Extract all paragraph text from the Google Docs structure
+  const textChunks: string[] = []
   for (const structElement of doc.body?.content ?? []) {
     if (!structElement.paragraph) continue
-
-    const paraWordIndices: number[] = []
-
-    // Collect all text from this paragraph's text runs
     let paraText = ''
     for (const element of structElement.paragraph.elements ?? []) {
       if (element.textRun?.content) {
         paraText += element.textRun.content
       }
     }
-
-    // Split into individual word tokens
-    for (const token of paraText.split(/\s+/)) {
-      const trimmed = token.trim()
-      if (!trimmed) continue
-      const normalized = normalizeWord(trimmed)
-      if (!normalized) continue
-
-      words.push({ text: trimmed, normalized, index: wordIndex, paragraphIndex: paragraphs.length })
-      paraWordIndices.push(wordIndex)
-      wordIndex++
-    }
-
-    if (paraWordIndices.length > 0) {
-      paragraphs.push(paraWordIndices)
-    }
+    const trimmed = paraText.trim()
+    if (trimmed) textChunks.push(trimmed)
   }
 
-  return { title: doc.title ?? 'Untitled Document', words, paragraphs }
+  return parseRawText(doc.title ?? 'Untitled Document', textChunks.join('\n\n'))
 }
 
 /**

@@ -158,6 +158,86 @@ button:active { transform: scale(0.97); }
   padding-top: 0.5rem;
 }
 
+/* ── Paste textarea ────────────────────────────────────────────────────── */
+.paste-textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.95rem;
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1.6;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.15s;
+  background: #fff;
+  resize: vertical;
+}
+.paste-textarea:focus {
+  border-color: #1a73e8;
+}
+.paste-textarea::placeholder {
+  color: #999;
+  font-style: italic;
+}
+
+.optional-label {
+  color: #999;
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+
+/* ── Upload dropzone ───────────────────────────────────────────────────── */
+.upload-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  background: #fafaf8;
+}
+.upload-dropzone:hover,
+.upload-dropzone.dragover {
+  border-color: #1a73e8;
+  background: #f0f4ff;
+}
+.dropzone-text {
+  color: #666;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.95rem;
+  text-align: center;
+  padding: 1rem 1rem 0.25rem;
+}
+.dropzone-formats {
+  color: #999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.8rem;
+  text-align: center;
+  padding: 0 1rem 0.75rem;
+}
+.hidden-file-input {
+  display: none;
+}
+
+/* ── Sign-in prompt (inside Google tabs) ───────────────────────────────── */
+.sign-in-prompt {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+.sign-in-prompt p {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 0.95rem;
+  color: #444;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+.sign-in-prompt .sign-in-btn {
+  margin-bottom: 1rem;
+}
+
 /* ── Loading screen ────────────────────────────────────────────────────── */
 .loading-screen {
   display: flex;

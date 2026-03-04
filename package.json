@@ -19,6 +19,7 @@
   "dependencies": {
     "@react-oauth/google": "^0.13.4",
     "fuzzball": "^2.2.3",
+    "mammoth": "^1.11.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "vosk-browser": "^0.0.8"
