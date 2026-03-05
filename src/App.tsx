@@ -143,9 +143,9 @@ export default function App() {
           <div className="landing">
             <h1>Lace's Super Cool Highlighter Reading App!</h1>
             <p className="tagline">
-              Read aloud from a Google Doc, or paste your text here.             
+              Read aloud from a Google Doc, or paste the text here.             
             </p>
-            <p>The app follows along and highlights each word as you say it! Yippee!</p>
+            <p>It follows along and highlights each word as you say it! Yippee!</p>
           </div>
           <DocLoader
             accessToken={accessToken}
