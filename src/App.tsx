@@ -4,6 +4,7 @@ import { DocLoader } from './components/DocLoader'
 import { Reader } from './components/Reader'
 import { fetchAndParseDoc } from './utils/docParser'
 import type { ParsedDoc } from './utils/docParser'
+import { ThemePicker } from './components/ThemePicker'
 
 type AppState =
   | { screen: 'idle' }
@@ -134,6 +135,7 @@ export default function App() {
   // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="app">
+      <ThemePicker />
       {appState.screen === 'idle' && (
         <>
           <div className="landing">
