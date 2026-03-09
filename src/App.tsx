@@ -5,7 +5,6 @@ import { Reader } from './components/Reader'
 import { fetchAndParseDoc } from './utils/docParser'
 import type { ParsedDoc } from './utils/docParser'
 import { ThemePicker } from './components/ThemePicker'
-import { SparkleTrail } from './components/SparkleTrail'
 
 type AppState =
   | { screen: 'idle' }
@@ -137,7 +136,6 @@ export default function App() {
   return (
     <div className="app">
       <ThemePicker />
-      <SparkleTrail />
       {appState.screen === 'idle' && (
         <>
           <div className="landing">

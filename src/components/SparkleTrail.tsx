@@ -1,69 +1,82 @@
 import { useEffect } from 'react'
 
-const CHARS = ['✦', '✧', '⋆', '·', '✶', '*', '˚', '⁕', '✸']
-const COLORS = ['#d4a8ff', '#ffb3de', '#ffe066', '#a8f0d4', '#b3d9ff', '#ffcba0', '#ffffff', '#e8a0ff']
+function hexToRgb(hex: string): string {
+  const h = hex.trim().replace('#', '')
+  const r = parseInt(h.substring(0, 2), 16)
+  const g = parseInt(h.substring(2, 4), 16)
+  const b = parseInt(h.substring(4, 6), 16)
+  return `${r},${g},${b}`
+}
 
 export function SparkleTrail() {
   useEffect(() => {
-    const container = document.createElement('div')
-    container.style.cssText =
-      'position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden;'
-    document.body.appendChild(container)
+    const BASE = `
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: opacity 0.4s ease;
+      opacity: 0;
+    `
 
-    let lastMoveTime = 0
-    let pos = { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+    // Large soft halo
+    const halo = document.createElement('div')
+    halo.style.cssText = BASE + 'width: 110px; height: 110px;'
 
-    function spawn(x: number, y: number, count: number) {
-      for (let i = 0; i < count; i++) {
-        const el = document.createElement('span')
-        const size = Math.random() * 14 + 7
-        const angle = Math.random() * 360
-        const dist = Math.random() * 55 + 15
-        const dur = Math.random() * 600 + 450
-        const dx = Math.cos((angle * Math.PI) / 180) * dist
-        const dy = Math.sin((angle * Math.PI) / 180) * dist
-        const color = COLORS[Math.floor(Math.random() * COLORS.length)]
-        const char = CHARS[Math.floor(Math.random() * CHARS.length)]
+    // Small bright core
+    const core = document.createElement('div')
+    core.style.cssText = BASE + 'width: 32px; height: 32px;'
 
-        el.textContent = char
-        el.style.cssText = `
-          position: absolute;
-          left: ${x}px;
-          top: ${y}px;
-          font-size: ${size}px;
-          line-height: 1;
-          color: ${color};
-          text-shadow: 0 0 8px ${color}, 0 0 16px ${color};
-          pointer-events: none;
-          user-select: none;
-          transform: translate(-50%, -50%);
-          animation: sparkle-fly ${dur}ms ease-out forwards;
-          --dx: ${dx}px;
-          --dy: ${dy}px;
-        `
-        container.appendChild(el)
-        setTimeout(() => el.remove(), dur + 50)
-      }
+    document.body.appendChild(halo)
+    document.body.appendChild(core)
+
+    function applyColors() {
+      const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()
+      const rgb = hexToRgb(accent || '#7c5cbf')
+      halo.style.background = `radial-gradient(circle, rgba(${rgb},0.22) 0%, rgba(${rgb},0.08) 45%, transparent 70%)`
+      halo.style.filter = 'blur(4px)'
+      core.style.background = `radial-gradient(circle, rgba(${rgb},0.55) 0%, rgba(${rgb},0.22) 55%, transparent 100%)`
+      core.style.filter = 'blur(1.5px)'
     }
+    applyColors()
+
+    const themeObserver = new MutationObserver(applyColors)
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+
+    const target = { x: -300, y: -300 }
+    const pos    = { x: -300, y: -300 }
+    let rafId: number
+    let visible = false
+
+    function tick() {
+      pos.x += (target.x - pos.x) * 0.12
+      pos.y += (target.y - pos.y) * 0.12
+      halo.style.left = `${pos.x}px`
+      halo.style.top  = `${pos.y}px`
+      core.style.left = `${pos.x}px`
+      core.style.top  = `${pos.y}px`
+      rafId = requestAnimationFrame(tick)
+    }
+    rafId = requestAnimationFrame(tick)
 
     function handleMove(e: MouseEvent) {
-      pos = { x: e.clientX, y: e.clientY }
-      const now = Date.now()
-      if (now - lastMoveTime < 14) return
-      lastMoveTime = now
-      spawn(pos.x, pos.y, Math.floor(Math.random() * 3) + 3)
+      target.x = e.clientX
+      target.y = e.clientY
+      if (!visible) {
+        visible = true
+        halo.style.opacity = '1'
+        core.style.opacity = '1'
+      }
     }
-
-    // Idle emission: 1-2 particles every 120ms even when not moving
-    const idleInterval = setInterval(() => {
-      spawn(pos.x, pos.y, Math.floor(Math.random() * 2) + 1)
-    }, 120)
 
     window.addEventListener('mousemove', handleMove)
     return () => {
       window.removeEventListener('mousemove', handleMove)
-      clearInterval(idleInterval)
-      container.remove()
+      cancelAnimationFrame(rafId)
+      themeObserver.disconnect()
+      halo.remove()
+      core.remove()
     }
   }, [])
 
