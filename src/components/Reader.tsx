@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ParsedDoc } from '../utils/docParser'
 import { createMatcherState, processSpokenWords } from '../utils/wordMatcher'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
+import { getSessionForDoc, saveSession } from '../utils/sessionStore'
 
 interface Props {
   doc: ParsedDoc
@@ -9,9 +10,15 @@ interface Props {
 }
 
 export function Reader({ doc, onBack }: Props) {
-  const [matcherState, setMatcherState] = useState(createMatcherState)
+  const [matcherState, setMatcherState] = useState<ReturnType<typeof createMatcherState>>(() => {
+    const session = getSessionForDoc(doc)
+    if (session && session.highlightedUpTo >= 0 && session.highlightedUpTo < doc.words.length) {
+      return { pointer: session.highlightedUpTo + 1, highlightedUpTo: session.highlightedUpTo, missStreak: 0 }
+    }
+    return createMatcherState()
+  })
   // Confirmed state only advances on finalized speech results
-  const confirmedStateRef = useRef(createMatcherState())
+  const confirmedStateRef = useRef(matcherState)
   const currentWordRef = useRef<HTMLSpanElement | null>(null)
 
   const handleWords = useCallback(
@@ -41,6 +48,11 @@ export function Reader({ doc, onBack }: Props) {
   const { isListening, error, transcript, startListening, stopListening, modelLoading } =
     useSpeechRecognition({ onWords: handleWords, onInterimWords: handleInterimWords })
 
+  // Persist reading progress to session store
+  useEffect(() => {
+    saveSession(doc, matcherState.highlightedUpTo)
+  }, [doc, matcherState.highlightedUpTo])
+
   // Auto-scroll to keep the current highlighted word in view
   useEffect(() => {
     currentWordRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -51,6 +63,7 @@ export function Reader({ doc, onBack }: Props) {
     const fresh = createMatcherState()
     confirmedStateRef.current = fresh
     setMatcherState(fresh)
+    saveSession(doc, -1)
   }
 
   const progress = doc.words.length > 0

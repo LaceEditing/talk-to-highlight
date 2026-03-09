@@ -5,6 +5,8 @@ import { Reader } from './components/Reader'
 import { fetchAndParseDoc } from './utils/docParser'
 import type { ParsedDoc } from './utils/docParser'
 import { ThemePicker } from './components/ThemePicker'
+import { getSessions, deleteSession } from './utils/sessionStore'
+import type { SavedSession } from './utils/sessionStore'
 
 type AppState =
   | { screen: 'idle' }
@@ -44,8 +46,21 @@ const SCOPES = [
   'https://www.googleapis.com/auth/drive.readonly',
 ].join(' ')
 
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000)
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+  return date.toLocaleDateString()
+}
+
 export default function App() {
   const [appState, setAppState] = useState<AppState>({ screen: 'idle' })
+  const [sessions, setSessions] = useState<SavedSession[]>(getSessions)
   const [accessToken, setAccessToken] = useState<string | null>(null)
   const [gapiReady, setGapiReady] = useState(false)
   const pickerRef = useRef<{ setVisible: (v: boolean) => void } | null>(null)
@@ -103,6 +118,22 @@ export default function App() {
     setAppState({ screen: 'reading', doc })
   }, [])
 
+  const handleResumeSession = useCallback((session: SavedSession) => {
+    setAppState({ screen: 'reading', doc: session.doc })
+  }, [])
+
+  const handleDeleteSession = useCallback((id: string) => {
+    deleteSession(id)
+    setSessions(getSessions())
+  }, [])
+
+  // Refresh session list whenever returning to idle
+  useEffect(() => {
+    if (appState.screen === 'idle') {
+      setSessions(getSessions())
+    }
+  }, [appState.screen])
+
   // ── Google Picker ────────────────────────────────────────────────────────
   const openPicker = useCallback(() => {
     if (!gapiReady || !accessToken || typeof google === 'undefined') {
@@ -145,6 +176,49 @@ export default function App() {
             </p>
             <p>It follows along and highlights each word as you say it! Yippee!</p>
           </div>
+
+          {sessions.length > 0 && (
+            <div className="saved-sessions">
+              <h2>Continue Reading</h2>
+              <ul className="session-list">
+                {sessions.map(s => {
+                  const pct = s.wordCount > 0
+                    ? Math.round(((s.highlightedUpTo + 1) / s.wordCount) * 100)
+                    : 0
+                  const date = new Date(s.lastAccessed)
+                  const timeAgo = formatTimeAgo(date)
+                  return (
+                    <li key={s.id} className="session-item">
+                      <button
+                        className="session-resume-btn"
+                        onClick={() => handleResumeSession(s)}
+                      >
+                        <span className="session-title">{s.title}</span>
+                        <span className="session-meta">
+                          {pct}% read · {timeAgo}
+                        </span>
+                        <span className="session-progress-bar">
+                          <span
+                            className="session-progress-fill"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </span>
+                      </button>
+                      <button
+                        className="session-delete-btn"
+                        onClick={() => handleDeleteSession(s.id)}
+                        title="Remove this session"
+                        aria-label={`Remove ${s.title}`}
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
+
           <DocLoader
             accessToken={accessToken}
             onDocSelected={handleDocSelected}

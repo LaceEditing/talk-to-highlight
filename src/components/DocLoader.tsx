@@ -17,7 +17,9 @@ export function DocLoader({ accessToken, onDocSelected, onDocLoaded, onOpenPicke
   const [tab, setTab] = useState<SourceTab>('paste')
   const [urlInput, setUrlInput] = useState('')
   const [urlError, setUrlError] = useState<string | null>(null)
-  const [pasteText, setPasteText] = useState('')
+  const [pasteText, setPasteText] = useState(() => {
+    try { return localStorage.getItem('tth-paste-text') ?? '' } catch { return '' }
+  })
   const [pasteError, setPasteError] = useState<string | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -48,6 +50,7 @@ export function DocLoader({ accessToken, onDocSelected, onDocLoaded, onOpenPicke
       return
     }
     setPasteError(null)
+    localStorage.removeItem('tth-paste-text')
     const doc = parseRawText('Pasted Text', text)
     onDocLoaded(doc)
   }
@@ -133,7 +136,9 @@ export function DocLoader({ accessToken, onDocSelected, onDocLoaded, onOpenPicke
             placeholder="Copy your text from a doc, txt, Milanote card, etc, and paste here..."
             value={pasteText}
             onChange={e => {
-              setPasteText(e.target.value)
+              const val = e.target.value
+              setPasteText(val)
+              try { localStorage.setItem('tth-paste-text', val) } catch { /* */ }
               setPasteError(null)
             }}
             rows={10}
