@@ -159,7 +159,7 @@ export function Reader({ doc, onBack }: Props) {
           </button>
         ) : modelLoading ? (
           <button className="primary-btn start-btn" disabled>
-            ⏳ Loading speech model…
+            ⏳ Initializing speech-to-text…
           </button>
         ) : (
           <button className="stop-btn" onClick={stopListening}>
