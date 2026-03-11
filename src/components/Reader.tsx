@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ParsedDoc } from '../utils/docParser'
 import { createMatcherState, processSpokenWords } from '../utils/wordMatcher'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
@@ -20,6 +20,8 @@ export function Reader({ doc, onBack }: Props) {
   // Confirmed state only advances on finalized speech results
   const confirmedStateRef = useRef(matcherState)
   const currentWordRef = useRef<HTMLSpanElement | null>(null)
+  const docContentRef = useRef<HTMLDivElement | null>(null)
+  const [paraNavOpen, setParaNavOpen] = useState(true)
 
   const handleWords = useCallback(
     (words: string[]) => {
@@ -57,6 +59,56 @@ export function Reader({ doc, onBack }: Props) {
   useEffect(() => {
     currentWordRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [matcherState.highlightedUpTo])
+
+  // Jump the highlight to a specific word index (used by double-click & paragraph nav)
+  const jumpTo = useCallback((wordIndex: number) => {
+    const clamped = Math.max(0, Math.min(wordIndex, doc.words.length - 1))
+    const next = { pointer: clamped + 1, highlightedUpTo: clamped, missStreak: 0 }
+    confirmedStateRef.current = next
+    setMatcherState(next)
+  }, [doc.words.length])
+
+  const handleWordDoubleClick = useCallback((e: React.MouseEvent, wIdx: number) => {
+    e.preventDefault()
+    jumpTo(wIdx)
+  }, [jumpTo])
+
+  // Paragraph previews for nav sidebar
+  const paraInfo = useMemo(() => doc.paragraphs.map((wordIndices, pIdx) => {
+    const previewWords = wordIndices.slice(0, 6).map(i => doc.words[i].text)
+    const preview = previewWords.join(' ') + (wordIndices.length > 6 ? '…' : '')
+    return { pIdx, firstWordIdx: wordIndices[0], lastWordIdx: wordIndices[wordIndices.length - 1], preview }
+  }), [doc.paragraphs, doc.words])
+
+  // Which paragraph is currently active (contains highlightedUpTo)
+  const activeParagraph = useMemo(() => {
+    if (matcherState.highlightedUpTo < 0) return -1
+    for (let i = 0; i < paraInfo.length; i++) {
+      if (matcherState.highlightedUpTo >= paraInfo[i].firstWordIdx &&
+          matcherState.highlightedUpTo <= paraInfo[i].lastWordIdx) return i
+    }
+    return -1
+  }, [matcherState.highlightedUpTo, paraInfo])
+
+  const jumpToParagraph = useCallback((pIdx: number) => {
+    if (pIdx < 0 || pIdx >= paraInfo.length) return
+    // Jump to first word of the paragraph, but set highlightedUpTo to one before it
+    // so the paragraph starts un-highlighted and the pointer is at the first word
+    const firstWord = paraInfo[pIdx].firstWordIdx
+    const next = { pointer: firstWord, highlightedUpTo: firstWord - 1, missStreak: 0 }
+    confirmedStateRef.current = next
+    setMatcherState(next)
+  }, [paraInfo])
+
+  const jumpPrevParagraph = useCallback(() => {
+    const target = activeParagraph > 0 ? activeParagraph - 1 : 0
+    jumpToParagraph(target)
+  }, [activeParagraph, jumpToParagraph])
+
+  const jumpNextParagraph = useCallback(() => {
+    const target = activeParagraph < paraInfo.length - 1 ? activeParagraph + 1 : paraInfo.length - 1
+    jumpToParagraph(target)
+  }, [activeParagraph, paraInfo.length, jumpToParagraph])
 
   function handleReset() {
     stopListening()
@@ -114,34 +166,87 @@ export function Reader({ doc, onBack }: Props) {
         </div>
       )}
 
-      {/* ── Document text ───────────────────────────────────── */}
-      <div className="doc-content">
-        {doc.paragraphs.map((wordIndices, pIdx) => (
-          <p key={pIdx} className="doc-paragraph">
-            {wordIndices.map(wIdx => {
-              const word = doc.words[wIdx]
-              const isHighlighted = wIdx <= matcherState.highlightedUpTo
-              const isCurrent = wIdx === matcherState.highlightedUpTo
-
-              return (
-                <span
-                  key={wIdx}
-                  ref={isCurrent ? currentWordRef : null}
-                  className={
-                    isCurrent
-                      ? 'word current'
-                      : isHighlighted
-                        ? 'word highlighted'
-                        : 'word'
-                  }
+      {/* ── Paragraph nav + Document text ───────────────────── */}
+      <div className="reader-body">
+        {/* ── Paragraph navigation sidebar ──────────────────── */}
+        <nav className={`para-nav${paraNavOpen ? ' open' : ''}`}>
+          <div className="para-nav-header">
+            <span className="para-nav-title">Paragraphs</span>
+            <button className="para-nav-close" onClick={() => setParaNavOpen(false)} title="Close">✕</button>
+          </div>
+          <div className="para-nav-arrows">
+            <button
+              className="para-nav-arrow"
+              onClick={jumpPrevParagraph}
+              disabled={activeParagraph <= 0}
+              title="Previous paragraph"
+            >↑ Prev</button>
+            <button
+              className="para-nav-arrow"
+              onClick={jumpNextParagraph}
+              disabled={activeParagraph >= paraInfo.length - 1}
+              title="Next paragraph"
+            >↓ Next</button>
+          </div>
+          <ol className="para-nav-list">
+            {paraInfo.map(({ pIdx, preview }) => (
+              <li key={pIdx}>
+                <button
+                  className={`para-nav-item${pIdx === activeParagraph ? ' active' : ''}`}
+                  onClick={() => jumpToParagraph(pIdx)}
                 >
-                  {word.text}{' '}
-                </span>
-              )
-            })}
-          </p>
-        ))}
+                  <span className="para-nav-num">{pIdx + 1}</span>
+                  <span className="para-nav-preview">{preview}</span>
+                </button>
+              </li>
+            ))}
+          </ol>
+        </nav>
+
+        {/* ── Floating toggle for paragraph nav ─────────────── */}
+        {!paraNavOpen && (
+          <button
+            className="para-nav-toggle"
+            onClick={() => setParaNavOpen(true)}
+            title="Open paragraph navigator"
+          >
+            ¶
+          </button>
+        )}
+
+        {/* ── Document text ─────────────────────────────────── */}
+        <div className="doc-content" ref={docContentRef}>
+          {doc.paragraphs.map((wordIndices, pIdx) => (
+            <p key={pIdx} className="doc-paragraph" data-para={pIdx}>
+              {wordIndices.map(wIdx => {
+                const word = doc.words[wIdx]
+                const isHighlighted = wIdx <= matcherState.highlightedUpTo
+                const isCurrent = wIdx === matcherState.highlightedUpTo
+
+                return (
+                  <span
+                    key={wIdx}
+                    ref={isCurrent ? currentWordRef : null}
+                    className={
+                      isCurrent
+                        ? 'word current'
+                        : isHighlighted
+                          ? 'word highlighted'
+                          : 'word'
+                    }
+                    onDoubleClick={(e) => handleWordDoubleClick(e, wIdx)}
+                  >
+                    {word.text}{' '}
+                  </span>
+                )
+              })}
+            </p>
+          ))}
+        </div>
       </div>
+
+      {/* ── Backdrop for mobile nav ─────────────────────────── */}
+      {paraNavOpen && <div className="para-nav-backdrop" onClick={() => setParaNavOpen(false)} />}
     </div>
   )
 }

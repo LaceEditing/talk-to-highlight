@@ -687,6 +687,10 @@ button:active { transform: scale(0.97); }
 .word {
   border-radius: 3px;
   transition: background 0.12s;
+  cursor: pointer;
+}
+.word:hover {
+  background: var(--surface-hover);
 }
 
 /* All previously read words */
@@ -698,6 +702,177 @@ button:active { transform: scale(0.97); }
 .word.current {
   background: var(--word-cur);
   border-radius: 3px;
+}
+.word.current:hover,
+.word.highlighted:hover {
+  filter: brightness(0.92);
+}
+
+/* ── Reader body (sidebar + content layout) ───────────────────────────── */
+.reader-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Paragraph navigation sidebar ─────────────────────────────────────── */
+.para-nav {
+  width: 260px;
+  min-width: 260px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: margin-left 0.25s ease;
+  margin-left: -260px;
+  position: relative;
+  z-index: 15;
+}
+.para-nav.open {
+  margin-left: 0;
+}
+
+.para-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.para-nav-title {
+  font-family: 'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.para-nav-close {
+  background: none;
+  color: var(--text-faint);
+  font-size: 0.9rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+}
+.para-nav-close:hover {
+  color: var(--accent);
+  background: var(--surface-hover);
+}
+
+.para-nav-arrows {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.para-nav-arrow {
+  flex: 1;
+  background: none;
+  color: var(--accent);
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+  font-family: 'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace;
+  border-radius: 6px;
+  transition: background 0.12s, border-color 0.12s;
+}
+.para-nav-arrow:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+}
+.para-nav-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.para-nav-list {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0.4rem 0;
+  margin: 0;
+}
+.para-nav-list li {
+  margin: 0;
+}
+
+.para-nav-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.85rem;
+  background: none;
+  border: none;
+  border-radius: 0;
+  text-align: left;
+  font-family: 'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  transition: background 0.1s;
+}
+.para-nav-item:hover {
+  background: var(--surface-hover);
+}
+.para-nav-item.active {
+  background: var(--surface-hover);
+  color: var(--accent);
+  font-weight: 600;
+  border-left: 3px solid var(--accent);
+}
+
+.para-nav-num {
+  flex-shrink: 0;
+  width: 1.6em;
+  text-align: right;
+  color: var(--text-faint);
+  font-size: 0.72rem;
+  padding-top: 0.05rem;
+}
+.para-nav-item.active .para-nav-num {
+  color: var(--accent);
+}
+
+.para-nav-preview {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Floating paragraph nav toggle ────────────────────────────────────── */
+.para-nav-toggle {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 14;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--accent);
+  font-size: 1.15rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.para-nav-toggle:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 14px rgba(0,0,0,0.2);
+  opacity: 1;
+}
+
+/* ── Backdrop (mobile overlay) ────────────────────────────────────────── */
+.para-nav-backdrop {
+  display: none;
 }
 
 /* ── Theme picker ──────────────────────────────────────────────────────── */
@@ -804,5 +979,28 @@ button:active { transform: scale(0.97); }
   }
   .landing h1 {
     font-size: 1.7rem;
+  }
+
+  /* Paragraph nav becomes a slide-over overlay on mobile */
+  .para-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    min-width: 280px;
+    margin-left: -280px;
+    z-index: 100;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.25);
+  }
+  .para-nav.open {
+    margin-left: 0;
+  }
+  .para-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+    background: rgba(0,0,0,0.35);
   }
 }
