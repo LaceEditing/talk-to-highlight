@@ -3,6 +3,7 @@ import type { ParsedDoc } from '../utils/docParser'
 import { createMatcherState, processSpokenWords } from '../utils/wordMatcher'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition'
 import { getSessionForDoc, saveSession } from '../utils/sessionStore'
+import { TextStylePicker } from './TextStylePicker'
 
 interface Props {
   doc: ParsedDoc
@@ -150,6 +151,11 @@ export function Reader({ doc, onBack }: Props) {
         <span className="doc-title">{doc.title}</span>
         <span className="progress-label">{progress}% read</span>
       </header>
+
+      {/* ── Text style toolbar ──────────────────────────────── */}
+      <div className="text-toolbar">
+        <TextStylePicker />
+      </div>
 
       {/* ── Controls ────────────────────────────────────────── */}
       <div className="controls">
