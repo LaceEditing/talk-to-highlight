@@ -637,9 +637,9 @@ button:active { transform: scale(0.97); }
   padding: 0.35rem 1.25rem;
   font-family: 'Consolas', 'Menlo', 'Monaco', 'Courier New', monospace;
   font-size: 0.85rem;
-  color: #2e7d32;
-  background: #f1f8f1;
-  border-bottom: 1px solid #c8e6c9;
+  color: var(--accent);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
 
 @keyframes pulse {
@@ -651,7 +651,7 @@ button:active { transform: scale(0.97); }
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #2e7d32;
+  background: var(--accent);
   animation: pulse 1.2s ease-in-out infinite;
   flex-shrink: 0;
 }
