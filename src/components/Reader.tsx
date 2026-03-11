@@ -60,6 +60,24 @@ export function Reader({ doc, onBack }: Props) {
     currentWordRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [matcherState.highlightedUpTo])
 
+  // Spacebar toggles listening (skip when focused on an input/button)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.code !== 'Space') return
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      e.preventDefault()
+      if (modelLoading) return
+      if (isListening) {
+        stopListening()
+      } else {
+        startListening()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isListening, modelLoading, startListening, stopListening])
+
   // Jump the highlight to a specific word index (used by double-click & paragraph nav)
   const jumpTo = useCallback((wordIndex: number) => {
     const clamped = Math.max(0, Math.min(wordIndex, doc.words.length - 1))

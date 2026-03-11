@@ -3,6 +3,12 @@ import type { ParsedDoc } from './docParser'
 const SESSIONS_KEY = 'tth-sessions'
 const MAX_SESSIONS = 20
 
+/**
+ * Schema version — bump this when the SavedSession shape changes.
+ * The migrate() function below handles upgrading old data.
+ */
+const SCHEMA_VERSION = 2
+
 export interface SavedSession {
   id: string
   title: string
@@ -10,6 +16,11 @@ export interface SavedSession {
   highlightedUpTo: number
   lastAccessed: number // epoch ms
   wordCount: number
+}
+
+interface StorageEnvelope {
+  version: number
+  sessions: SavedSession[]
 }
 
 /** Deterministic ID from document content (first 200 chars of words + title) */
@@ -23,11 +34,41 @@ function generateSessionId(doc: ParsedDoc): string {
   return 'sess_' + (hash >>> 0).toString(36)
 }
 
+/**
+ * Migrate data from older schema versions to current.
+ * Each case falls through so migrations are cumulative.
+ */
+function migrate(raw: unknown): StorageEnvelope {
+  // v1 / unversioned: raw was a plain SavedSession[]
+  if (Array.isArray(raw)) {
+    return { version: SCHEMA_VERSION, sessions: raw as SavedSession[] }
+  }
+
+  const envelope = raw as Partial<StorageEnvelope>
+  const version = envelope.version ?? 1
+  const sessions = envelope.sessions ?? []
+
+  // Future migrations go here, e.g.:
+  // if (version < 3) { sessions = sessions.map(s => ({ ...s, newField: defaultVal })) }
+  void version // acknowledge for future use
+
+  return { version: SCHEMA_VERSION, sessions }
+}
+
 function loadAll(): SavedSession[] {
   try {
     const raw = localStorage.getItem(SESSIONS_KEY)
     if (!raw) return []
-    return JSON.parse(raw) as SavedSession[]
+    const parsed: unknown = JSON.parse(raw)
+    const envelope = migrate(parsed)
+    // Re-save if we migrated from an older version
+    if (
+      !(parsed && typeof parsed === 'object' && !Array.isArray(parsed) &&
+        (parsed as StorageEnvelope).version === SCHEMA_VERSION)
+    ) {
+      saveAll(envelope.sessions)
+    }
+    return envelope.sessions
   } catch {
     return []
   }
@@ -35,7 +76,8 @@ function loadAll(): SavedSession[] {
 
 function saveAll(sessions: SavedSession[]) {
   try {
-    localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions))
+    const envelope: StorageEnvelope = { version: SCHEMA_VERSION, sessions }
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify(envelope))
   } catch { /* storage full — non-critical */ }
 }
 
